@@ -5,6 +5,7 @@ use crate::sys::process::{_get_process_data, compute_cpu_usage, refresh_procs, u
 use crate::sys::utils::{get_all_data, to_u64};
 use crate::{Cpu, CpuRefreshKind, LoadAvg, MemoryRefreshKind, Pid, Process, ProcessRefreshKind};
 
+use crate::unix::linux::vars::*;
 use libc::{self, c_char, sysconf, _SC_CLK_TCK, _SC_HOST_NAME_MAX, _SC_PAGESIZE};
 use std::cmp::min;
 use std::collections::HashMap;
@@ -59,7 +60,7 @@ pub(crate) fn get_max_nb_fds() -> isize {
 }
 
 fn boot_time() -> u64 {
-    if let Ok(buf) = File::open("/proc/stat").and_then(|mut f| {
+    if let Ok(buf) = File::open(root_join("/proc/stat")).and_then(|mut f| {
         let mut buf = Vec::new();
         f.read_to_end(&mut buf)?;
         Ok(buf)
@@ -192,7 +193,7 @@ impl SystemInner {
             return;
         }
         let mut mem_available_found = false;
-        read_table("/proc/meminfo", ':', |key, value_kib| {
+        read_table(&root_join("/proc/meminfo"), ':', |key, value_kib| {
             let field = match key {
                 "MemTotal" => &mut self.mem_total,
                 "MemFree" => &mut self.mem_free,
@@ -258,7 +259,7 @@ impl SystemInner {
     ) -> bool {
         let uptime = Self::uptime();
         match _get_process_data(
-            &Path::new("/proc/").join(pid.to_string()),
+            &Path::new(&root_join("/proc/")).join(pid.to_string()),
             &mut self.process_list,
             pid,
             None,
@@ -352,7 +353,7 @@ impl SystemInner {
     }
 
     pub(crate) fn uptime() -> u64 {
-        let content = get_all_data("/proc/uptime", 50).unwrap_or_default();
+        let content = get_all_data(root_join("/proc/uptime"), 50).unwrap_or_default();
         content
             .split('.')
             .next()
@@ -366,7 +367,7 @@ impl SystemInner {
 
     pub(crate) fn load_average() -> LoadAvg {
         let mut s = String::new();
-        if File::open("/proc/loadavg")
+        if File::open(root_join("/proc/loadavg"))
             .and_then(|mut f| f.read_to_string(&mut s))
             .is_err()
         {
@@ -539,8 +540,8 @@ impl crate::CGroupLimits {
             "You need to call System::refresh_memory before trying to get cgroup limits!",
         );
         if let (Some(mem_cur), Some(mem_max)) = (
-            read_u64("/sys/fs/cgroup/memory.current"),
-            read_u64("/sys/fs/cgroup/memory.max"),
+            read_u64(&root_join("/sys/fs/cgroup/memory.current")),
+            read_u64(&root_join("/sys/fs/cgroup/memory.max")),
         ) {
             // cgroups v2
 
@@ -553,19 +554,23 @@ impl crate::CGroupLimits {
             limits.total_memory = min(mem_max, sys.mem_total);
             limits.free_memory = limits.total_memory.saturating_sub(mem_cur);
 
-            if let Some(swap_cur) = read_u64("/sys/fs/cgroup/memory.swap.current") {
+            if let Some(swap_cur) = read_u64(&root_join("/sys/fs/cgroup/memory.swap.current")) {
                 limits.free_swap = sys.swap_total.saturating_sub(swap_cur);
             }
 
-            read_table("/sys/fs/cgroup/memory.stat", ' ', |_key, value| {
-                limits.free_memory = limits.free_memory.saturating_sub(value);
-            });
+            read_table(
+                &root_join("/sys/fs/cgroup/memory.stat"),
+                ' ',
+                |_key, value| {
+                    limits.free_memory = limits.free_memory.saturating_sub(value);
+                },
+            );
 
             Some(limits)
         } else if let (Some(mem_cur), Some(mem_max)) = (
             // cgroups v1
-            read_u64("/sys/fs/cgroup/memory/memory.usage_in_bytes"),
-            read_u64("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+            read_u64(&root_join("/sys/fs/cgroup/memory/memory.usage_in_bytes")),
+            read_u64(&root_join("/sys/fs/cgroup/memory/memory.limit_in_bytes")),
         ) {
             let mut limits = Self {
                 total_memory: sys.mem_total,

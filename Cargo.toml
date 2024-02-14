@@ -41,6 +41,7 @@ rustdoc-args = ["--generate-link-to-definition"]
 
 [dependencies]
 cfg-if = "1.0"
+lazy_static = "1.4.0"
 rayon = { version = "^1.8", optional = true }
 serde = { version = "^1.0.190", optional = true }
 

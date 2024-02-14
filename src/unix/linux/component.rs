@@ -6,6 +6,7 @@
 // transposed to rust we only read `u32` or `i32` values.
 use crate::Component;
 
+use crate::unix::linux::vars::*;
 use std::collections::HashMap;
 use std::fs::{read_dir, File};
 use std::io::Read;
@@ -361,7 +362,7 @@ impl ComponentsInner {
 
     pub(crate) fn refresh_list(&mut self) {
         self.components.clear();
-        if let Ok(dir) = read_dir(Path::new("/sys/class/hwmon/")) {
+        if let Ok(dir) = read_dir(Path::new(&root_join("/sys/class/hwmon/"))) {
             for entry in dir.flatten() {
                 let entry = entry.path();
                 if !entry.is_dir()

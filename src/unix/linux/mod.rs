@@ -7,6 +7,7 @@ pub mod network;
 pub mod process;
 pub mod system;
 pub(crate) mod utils;
+pub mod vars;
 
 pub(crate) use self::component::{ComponentInner, ComponentsInner};
 pub(crate) use self::cpu::CpuInner;
