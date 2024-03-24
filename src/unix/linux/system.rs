@@ -558,14 +558,6 @@ impl crate::CGroupLimits {
                 limits.free_swap = sys.swap_total.saturating_sub(swap_cur);
             }
 
-            read_table(
-                &root_join("/sys/fs/cgroup/memory.stat"),
-                ' ',
-                |_key, value| {
-                    limits.free_memory = limits.free_memory.saturating_sub(value);
-                },
-            );
-
             Some(limits)
         } else if let (Some(mem_cur), Some(mem_max)) = (
             // cgroups v1

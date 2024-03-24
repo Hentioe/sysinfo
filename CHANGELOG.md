@@ -1,3 +1,14 @@
+# 0.30.7
+
+ * Linux: Fix cgroup memory computation.
+ * FreeBSD: Fix documentation about disk usage.
+
+# 0.30.6
+
+ * macOS: Fix missing update of process run time.
+ * Add new `Groups` API.
+ * Improve documentation.
+
 # 0.30.5
 
  * Windows: Correctly retrieve processes name on 32 bits platforms.
